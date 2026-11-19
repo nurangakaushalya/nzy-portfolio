@@ -49,20 +49,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             >
               Contact Us
             </button>
-            <a
-              href="/admin"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate('admin');
-              }}
-              className="text-xs text-white/45 transition-colors hover:text-white/80"
-            >
-              Demo Admin
-            </a>
           </nav>
 
           <p className="text-xs text-white/45">
-            © {BRAND_CONFIG.copyrightYear} {BRAND_CONFIG.name}. Demonstration portfolio prototype.
+            © {BRAND_CONFIG.copyrightYear} {BRAND_CONFIG.name}. All rights reserved.
           </p>
         </div>
       </div>
