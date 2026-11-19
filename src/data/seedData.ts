@@ -1,0 +1,217 @@
+import type { Category, PortfolioData, Project } from '../types/portfolio';
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'cat-commercials', name: 'Commercials', order: 0 },
+  { id: 'cat-reels', name: 'Social Media Reels', order: 1 },
+  { id: 'cat-music', name: 'Music Videos', order: 2 },
+  { id: 'cat-corporate', name: 'Corporate Videos', order: 3 },
+  { id: 'cat-motion', name: 'Motion Graphics', order: 4 },
+  { id: 'cat-design', name: 'Graphic Design', order: 5 },
+];
+
+const SAMPLE_PREVIEWS = {
+  blazes: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+  escapes: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+  fun: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+  joy: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoy.mp4',
+  meltdowns: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+};
+
+export const DEFAULT_PROJECTS: Project[] = [
+  {
+    id: 'proj-chronograph-film',
+    title: 'Chronograph Field — Product Launch Cut',
+    type: 'video',
+    categoryId: 'cat-commercials',
+    description:
+      'Demonstration launch spot showcasing macro mechanical detail, rhythmic pacing, and warm tungsten color grading built for product release campaigns.',
+    services: ['Editorial Cut', 'Color Grading', 'Sound Design'],
+    thumbnailUrl: '/src/assets/images/commercial_apex_watch_1794892278805.jpg',
+    previewUrl: SAMPLE_PREVIEWS.blazes,
+    fullVideoUrl: SAMPLE_PREVIEWS.blazes,
+    duration: '00:45',
+    status: 'published',
+    order: 0,
+  },
+  {
+    id: 'proj-coastal-grand-tourer',
+    title: 'Coastal Dusk — Automotive Commercial Spec',
+    type: 'video',
+    categoryId: 'cat-commercials',
+    description:
+      'High-contrast twilight driving commercial edit focused on clean transitions, atmospheric road soundscapes, and widescreen framing.',
+    services: ['Commercial Editing', 'Sound Mixing', 'Finish & Mastering'],
+    thumbnailUrl: '/src/assets/images/commercial_ev_horizon_1794892280413.jpg',
+    previewUrl: SAMPLE_PREVIEWS.escapes,
+    fullVideoUrl: SAMPLE_PREVIEWS.escapes,
+    duration: '01:12',
+    status: 'published',
+    order: 1,
+  },
+  {
+    id: 'proj-night-outerwear-reel',
+    title: 'Night Outerwear Drop — Campaign Reel',
+    type: 'video',
+    categoryId: 'cat-reels',
+    description:
+      'Fast-paced social reel cut combining handheld street footage, beat-synced speed ramps, and restrained title typography.',
+    services: ['Short-Form Editing', 'Beat Sync', 'Kinetic Captions'],
+    thumbnailUrl: '/src/assets/images/reel_streetwear_drop_1794892280358.jpg',
+    previewUrl: SAMPLE_PREVIEWS.fun,
+    fullVideoUrl: SAMPLE_PREVIEWS.fun,
+    duration: '00:28',
+    status: 'published',
+    order: 2,
+  },
+  {
+    id: 'proj-roastery-pour-reel',
+    title: 'Single Origin Extraction — Social Series',
+    type: 'video',
+    categoryId: 'cat-reels',
+    description:
+      'Sensory micro-documentary reel highlighting tactile craft, slow-motion pours, and crisp acoustic foley.',
+    services: ['Reels Editing', 'Foley & Audio', 'Color Pass'],
+    thumbnailUrl: '/src/assets/images/reel_espresso_craft_1794892280303.jpg',
+    previewUrl: SAMPLE_PREVIEWS.joy,
+    fullVideoUrl: SAMPLE_PREVIEWS.joy,
+    duration: '00:34',
+    status: 'published',
+    order: 3,
+  },
+  {
+    id: 'proj-amber-stage-session',
+    title: 'Amber Haze — Live Studio Performance',
+    type: 'video',
+    categoryId: 'cat-music',
+    description:
+      'Single-spotlight live performance film cut across three camera angles with film emulation and dynamic atmospheric pacing.',
+    services: ['Multicam Editing', 'Film Emulation Grade', 'Audio Sync'],
+    thumbnailUrl: '/src/assets/images/music_neon_echo_1794892279430.jpg',
+    youtubeUrl: 'https://www.youtube.com/watch?v=YE7VzlLtp-4',
+    previewUrl: SAMPLE_PREVIEWS.meltdowns,
+    fullVideoUrl: SAMPLE_PREVIEWS.meltdowns,
+    duration: '03:42',
+    status: 'published',
+    order: 4,
+  },
+  {
+    id: 'proj-canyon-acoustic-film',
+    title: 'Blue Hour Canyon — Acoustic Session',
+    type: 'video',
+    categoryId: 'cat-music',
+    description:
+      'Intimate twilight acoustic session capturing wide landscape atmosphere and natural ambient resonance.',
+    services: ['Music Video Edit', 'Color Grading', 'Title Card Design'],
+    thumbnailUrl: '/src/assets/images/music_desert_session_1794892281487.jpg',
+    previewUrl: SAMPLE_PREVIEWS.escapes,
+    fullVideoUrl: SAMPLE_PREVIEWS.escapes,
+    duration: '04:08',
+    status: 'published',
+    order: 5,
+  },
+  {
+    id: 'proj-timber-concrete-profile',
+    title: 'Material Practice — Architectural Studio Film',
+    type: 'video',
+    categoryId: 'cat-corporate',
+    description:
+      'Measured studio profile documentary weaving interview dialogue with clean spatial cutaways and architectural detail.',
+    services: ['Documentary Editing', 'Dialogue Cleanup', 'Lower Thirds'],
+    thumbnailUrl: '/src/assets/images/corporate_arch_studio_1794892280183.jpg',
+    previewUrl: SAMPLE_PREVIEWS.blazes,
+    fullVideoUrl: SAMPLE_PREVIEWS.blazes,
+    duration: '02:35',
+    status: 'published',
+    order: 6,
+  },
+  {
+    id: 'proj-precision-machining-overview',
+    title: 'Tolerance & Craft — Workshop Overview',
+    type: 'video',
+    categoryId: 'cat-corporate',
+    description:
+      'Industrial capability film structured around clear narration, machining process sequences, and technical callouts.',
+    services: ['Corporate Editing', 'Callout Graphics', 'Sound Mastering'],
+    thumbnailUrl: '/src/assets/images/corporate_robotics_lab_1794892282861.jpg',
+    previewUrl: SAMPLE_PREVIEWS.joy,
+    fullVideoUrl: SAMPLE_PREVIEWS.joy,
+    duration: '02:18',
+    status: 'published',
+    order: 7,
+  },
+  {
+    id: 'proj-obsidian-ribbon-package',
+    title: 'Obsidian Ribbon — Broadcast Motion Package',
+    type: 'video',
+    categoryId: 'cat-motion',
+    description:
+      'Modular 3D title sequence, transition stingers, and end-slate motion system designed for dark editorial broadcasts.',
+    services: ['3D Motion Design', 'Title Sequences', 'Broadcast Templates'],
+    thumbnailUrl: '/src/assets/images/motion_kinetic_type_1794892282266.jpg',
+    previewUrl: SAMPLE_PREVIEWS.fun,
+    fullVideoUrl: SAMPLE_PREVIEWS.fun,
+    duration: '00:52',
+    status: 'published',
+    order: 8,
+  },
+  {
+    id: 'proj-harmonic-bars-opener',
+    title: 'Harmonic Array — Event Screen Visuals',
+    type: 'video',
+    categoryId: 'cat-motion',
+    description:
+      'Audio-reactive procedural metallic wave visuals crafted for stage backdrops and conference opening loops.',
+    services: ['Motion Graphics', 'Audio-Reactive Loops', 'Stage Formatting'],
+    thumbnailUrl: '/src/assets/images/motion_audio_wave_1794892281864.jpg',
+    previewUrl: SAMPLE_PREVIEWS.meltdowns,
+    fullVideoUrl: SAMPLE_PREVIEWS.meltdowns,
+    duration: '01:05',
+    status: 'published',
+    order: 9,
+  },
+  {
+    id: 'proj-tactile-stationery-identity',
+    title: 'Monolith Stationery & Packaging System',
+    type: 'design',
+    categoryId: 'cat-design',
+    description:
+      'Demonstration identity system pairing embossed charcoal stocks, foil edge detailing, and rigid box Swiss grid packaging.',
+    services: ['Brand Identity', 'Packaging Layout', 'Print Production Files'],
+    thumbnailUrl: '/src/assets/images/design_monolith_brand_1794892282933.jpg',
+    galleryImages: [
+      '/src/assets/images/design_monolith_brand_1794892282933.jpg',
+      '/src/assets/images/design_monolith_packaging_1794892283097.jpg',
+      '/src/assets/images/design_poster_detail_1794892283393.jpg',
+    ],
+    status: 'published',
+    order: 10,
+  },
+  {
+    id: 'proj-grid-exhibition-posters',
+    title: 'Grid Systems — Exhibition Poster & Lookbook',
+    type: 'design',
+    categoryId: 'cat-design',
+    description:
+      'Editorial poster triptych and companion print lookbook built on strict modular typography and high-contrast photography.',
+    services: ['Editorial Layout', 'Poster Design', 'Typographic Direction'],
+    thumbnailUrl: '/src/assets/images/design_poster_series_1794892283720.jpg',
+    galleryImages: [
+      '/src/assets/images/design_poster_series_1794892283720.jpg',
+      '/src/assets/images/design_poster_detail_1794892283393.jpg',
+      '/src/assets/images/design_monolith_packaging_1794892283097.jpg',
+    ],
+    status: 'published',
+    order: 11,
+  },
+];
+
+export function createDefaultPortfolioData(): PortfolioData {
+  return {
+    categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
+    projects: DEFAULT_PROJECTS.map((p) => ({
+      ...p,
+      services: [...p.services],
+      galleryImages: p.galleryImages ? [...p.galleryImages] : undefined,
+    })),
+  };
+}
