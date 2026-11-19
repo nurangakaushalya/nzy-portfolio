@@ -11,7 +11,7 @@ interface HeaderProps {
   onSearchSubmit?: () => void;
 }
 
-const NAV_ITEMS: {
+export const NAV_ITEMS: {
   id: Exclude<NavSection, 'admin'>;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -32,19 +32,31 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const headerRef = React.useRef<HTMLElement>(null);
+  const navBarRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   React.useEffect(() => {
     const updateHeaderHeight = () => {
-      if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
+      const el = navBarRef.current || headerRef.current;
+      if (el) {
+        const height = el.offsetHeight;
         document.documentElement.style.setProperty('--header-height', `${height}px`);
       }
     };
     updateHeaderHeight();
     window.addEventListener('resize', updateHeaderHeight);
     return () => window.removeEventListener('resize', updateHeaderHeight);
-  }, [mobileMenuOpen, mobileSearchOpen]);
+  }, []);
 
   const handleNavClick = (section: NavSection) => {
     onNavigate(section);
@@ -64,9 +76,21 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
+  const isTransparent = isScrolled && !mobileMenuOpen && !mobileSearchOpen;
+
   return (
-    <header ref={headerRef} className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
+    <header
+      ref={headerRef}
+      className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 will-change-[background-color,backdrop-filter,border-color,box-shadow] ${
+        isTransparent
+          ? 'bg-black/35 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_-1px_0_rgba(255,255,255,0.06)]'
+          : 'bg-black border-b border-white/5 shadow-none backdrop-blur-none'
+      }`}
+    >
+      <div
+        ref={navBarRef}
+        className="mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8"
+      >
         {/* Zone 1: Brand Logo */}
         <div className="flex items-center shrink-0">
           <a

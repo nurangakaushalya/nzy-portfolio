@@ -256,7 +256,7 @@ export default function App() {
           onSearchSubmit={handleSearchSubmit}
         />
 
-        <main className="flex-1">
+        <main className="flex-1 pt-[var(--header-height,4rem)]">
           {(activeSection === 'work' || activeSection === 'services') && (
             <WorkView
               categories={portfolioData.categories}
