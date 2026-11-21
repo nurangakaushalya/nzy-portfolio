@@ -69,3 +69,27 @@ export function getYouTubeEmbedUrl(videoId: string, autoplay = true): string {
   }
   return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 }
+
+/**
+ * Builds an embedded YouTube preview URL configured for silent, seamless inline preview loops:
+ * - autoplay=1: begins playing immediately upon mount
+ * - mute=1: muted audio on hover/tap
+ * - controls=0: minimal chrome without player buttons
+ * - loop=1 & playlist=videoId: single-video continuous looping in the YouTube player
+ * - modestbranding=1 & rel=0: clean presentation without related video suggestions
+ * - playsinline=1: inline mobile playback
+ */
+export function getYouTubePreviewUrl(videoId: string): string {
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    controls: '0',
+    loop: '1',
+    playlist: videoId,
+    modestbranding: '1',
+    rel: '0',
+    playsinline: '1',
+    enablejsapi: '1',
+  });
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+}

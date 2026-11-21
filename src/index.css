@@ -6,6 +6,7 @@
     --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
     --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --font-archivo: 'Archivo Black', system-ui, -apple-system, sans-serif;
     color-scheme: dark;
 
     /* 3D Depth Design Tokens */
@@ -40,8 +41,7 @@
     background-attachment: fixed;
     color: #ffffff;
     font-family: var(--font-sans);
-    overflow-x: hidden;
-    cursor: url('/video-cursor.svg') 2 2, auto;
+    overflow-x: clip;
   }
 
   a,
@@ -52,11 +52,11 @@
   label[for],
   select,
   summary {
-    cursor: url('/video-cursor-pointer.svg') 2 2, pointer;
+    cursor: pointer;
   }
 
   .cursor-pointer {
-    cursor: url('/video-cursor-pointer.svg') 2 2, pointer !important;
+    cursor: pointer !important;
   }
 
   input[type="text"],
@@ -83,6 +83,11 @@
 
   .font-mono {
     font-family: var(--font-mono);
+  }
+
+  .font-archivo {
+    font-family: var(--font-archivo);
+    font-weight: 400;
   }
 
   *:focus-visible {
@@ -209,21 +214,6 @@ html.lenis body {
   pointer-events: none;
 }
 
-/* Subtle thumbnail vertical stretch based on scroll velocity (max ~1%, scaleY 1 to 1.01) */
-.project-thumbnail-stretch {
-  transform: scaleY(var(--thumbnail-stretch, 1));
-  transform-origin: center center;
-  will-change: transform;
-  transition: transform 60ms linear;
-}
-
-/* Disable stretching on a thumbnail while its video preview is playing */
-.preview-playing .project-thumbnail-stretch,
-.project-thumbnail-stretch.preview-active {
-  transform: none !important;
-  transition: none !important;
-}
-
 @keyframes portfolio-fade-in {
   from {
     opacity: 0;
@@ -237,6 +227,136 @@ html.lenis body {
 
 .portfolio-enter {
   animation: portfolio-fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Graphix-style Services Row Gradient & Animations */
+@keyframes gx-grad {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 150% 50%;
+  }
+}
+
+.gx-service-gradient {
+  background: linear-gradient(105deg, #e2550f 0%, #ff6a1f 20%, #ffb48a 40%, #ff8a3d 60%, #ff8a3d 80%, #e2550f 100%);
+  background-size: 300% 100%;
+  background-position: 0% 50%;
+}
+
+.gx-service-gradient-animate {
+  animation: gx-grad 3.2s linear infinite;
+}
+
+/* Platform Daddy-style Shutter / Slice Reveal Keyframes */
+@keyframes shutter-top {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  18% {
+    transform: translateX(14px);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(5px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes shutter-mid {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  18% {
+    transform: translateX(-14px);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(-5px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes shutter-bot {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  18% {
+    transform: translateX(14px);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(5px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes shutter-solid {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.1;
+  }
+  60% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-shutter-top {
+  animation: shutter-top 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-shutter-mid {
+  animation: shutter-mid 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-shutter-bot {
+  animation: shutter-bot 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-shutter-solid {
+  animation: shutter-solid 750ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Custom Play Cursor Overrides for Video Thumbnails on Desktop */
+@media (pointer: fine) {
+  [data-playable-thumbnail="true"] {
+    cursor: none !important;
+  }
+  [data-playable-thumbnail="true"] button,
+  [data-playable-thumbnail="true"] a,
+  [data-playable-thumbnail="true"] [data-player-control="true"] {
+    cursor: pointer !important;
+  }
+}
+
+@media (pointer: coarse), (hover: none) {
+  .play-cursor-container {
+    display: none !important;
+  }
+  .touch-play-badge {
+    display: inline-flex !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -253,6 +373,16 @@ html.lenis body {
     opacity: 1 !important;
     transform: none !important;
   }
+  .animate-shutter-top,
+  .animate-shutter-mid,
+  .animate-shutter-bot {
+    display: none !important;
+  }
+  .animate-shutter-solid {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
   .depth-card,
   .depth-btn,
   .depth-btn-active {
@@ -261,8 +391,7 @@ html.lenis body {
   }
   .depth-card:hover,
   .depth-btn:hover,
-  .depth-btn-active:hover,
-  .project-thumbnail-stretch {
+  .depth-btn-active:hover {
     transform: none !important;
     transition: none !important;
   }

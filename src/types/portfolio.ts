@@ -25,6 +25,8 @@ export interface Project {
   galleryImages?: string[];
   status: ProjectStatus;
   order: number;
+  aspectRatio?: '16:9' | '9:16';
+  orientation?: 'landscape' | 'portrait';
 }
 
 export interface PortfolioData {

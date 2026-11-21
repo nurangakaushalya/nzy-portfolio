@@ -1,37 +1,30 @@
 import React, { useState } from 'react';
-import { Film, LayoutGrid, Mail, Menu, Search, Sparkles, User, X } from 'lucide-react';
+import { Film, Mail, Menu, Sparkles, User, X } from 'lucide-react';
 import type { NavSection } from '../types/portfolio';
 import { BRAND_CONFIG } from '../config/brand';
+import { scrollToTarget } from '../hooks/useSmoothScroll';
 
 interface HeaderProps {
   activeSection: NavSection;
-  searchQuery: string;
   onNavigate: (section: NavSection) => void;
-  onSearchChange: (value: string) => void;
-  onSearchSubmit?: () => void;
 }
 
 export const NAV_ITEMS: {
-  id: Exclude<NavSection, 'admin'>;
+  id: Exclude<NavSection, 'admin' | 'categories'>;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
   { id: 'work', label: 'Work', icon: Film },
   { id: 'services', label: 'Services', icon: Sparkles },
-  { id: 'categories', label: 'Categories', icon: LayoutGrid },
   { id: 'about', label: 'About Us', icon: User },
   { id: 'contact', label: 'Contact Us', icon: Mail },
 ];
 
 export const Header: React.FC<HeaderProps> = ({
   activeSection,
-  searchQuery,
   onNavigate,
-  onSearchChange,
-  onSearchSubmit,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const headerRef = React.useRef<HTMLElement>(null);
   const navBarRef = React.useRef<HTMLDivElement>(null);
@@ -61,30 +54,22 @@ export const Header: React.FC<HeaderProps> = ({
   const handleNavClick = (section: NavSection) => {
     onNavigate(section);
     setMobileMenuOpen(false);
-  };
-
-  const handleSearchInput = (value: string) => {
-    onSearchChange(value);
-    if (activeSection !== 'work') {
-      onNavigate('work');
+    if (section === 'work') {
+      setTimeout(() => {
+        scrollToTarget('#portfolio-section');
+      }, 50);
     }
   };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      onSearchSubmit?.();
-    }
-  };
-
-  const isTransparent = isScrolled && !mobileMenuOpen && !mobileSearchOpen;
 
   return (
     <header
       ref={headerRef}
       className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 will-change-[background-color,backdrop-filter,border-color,box-shadow] ${
-        isTransparent
+        mobileMenuOpen
+          ? 'bg-black/95 backdrop-blur-2xl border-b border-white/10 shadow-2xl'
+          : isScrolled
           ? 'bg-black/35 backdrop-blur-xl border-b border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_-1px_0_rgba(255,255,255,0.06)]'
-          : 'bg-black border-b border-white/5 shadow-none backdrop-blur-none'
+          : 'bg-black/20 backdrop-blur-md border-b border-white/5 shadow-none'
       }`}
     >
       <div
@@ -145,67 +130,23 @@ export const Header: React.FC<HeaderProps> = ({
           })}
         </nav>
 
-        {/* Zone 3: Inset search field + mobile quick search & menu toggles */}
+        {/* Zone 3: CTA Button & Mobile Menu Toggle */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-          <div className="relative hidden sm:block w-52 lg:w-64">
-            <label htmlFor="header-project-search" className="sr-only">
-              Search projects
-            </label>
-            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-white/60">
-              <Search className="h-4 w-4" aria-hidden="true" />
-            </div>
-            <input
-              id="header-project-search"
-              type="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Search projects..."
-              className="h-9.5 w-full rounded-xl border border-white/12 border-t-black/70 bg-[#0C0C0C] pl-9 pr-8 text-sm font-medium text-white placeholder:text-white/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(0,0,0,0.45),0_1px_0_rgba(255,255,255,0.05)] transition-all duration-180 focus:bg-[#111111] focus:border-[#FF6A00]/80 focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),0_0_14px_rgba(255,106,0,0.28)] focus:outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => handleSearchInput('')}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-white/60 hover:text-white hover:bg-white/15 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-
           <button
             type="button"
-            onClick={() => {
-              setMobileSearchOpen((prev) => !prev);
-              setMobileMenuOpen(false);
-            }}
-            aria-expanded={mobileSearchOpen}
-            aria-label={mobileSearchOpen ? 'Close project search' : 'Search projects'}
-            className={`inline-flex h-9.5 w-9.5 items-center justify-center rounded-xl border transition-all duration-180 sm:hidden ${
-              mobileSearchOpen
-                ? 'bg-gradient-to-b from-[#262626] to-[#181818] border-[#FF6A00]/40 border-t-white/30 text-white shadow-[0_2px_8px_rgba(255,106,0,0.25),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                : 'bg-gradient-to-b from-[#202020] to-[#141414] border-white/10 border-t-white/20 text-white hover:border-white/20 shadow-[0_2px_6px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)]'
-            }`}
+            onClick={() => handleNavClick('contact')}
+            className="hidden sm:inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold text-black bg-gradient-to-b from-[#FF7A1A] to-[#FF6A00] border border-[#FF8A33] border-t-white/40 shadow-[0_3px_10px_rgba(255,106,0,0.35)] hover:-translate-y-0.5 hover:shadow-[0_5px_14px_rgba(255,106,0,0.5)] transition-all"
           >
-            <Search className="h-4 w-4" aria-hidden="true" />
+            <span>Start a project</span>
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              setMobileMenuOpen((prev) => !prev);
-              setMobileSearchOpen(false);
-            }}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation-panel"
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className={`inline-flex h-9.5 w-9.5 items-center justify-center rounded-xl border transition-all duration-180 md:hidden ${
-              mobileMenuOpen
-                ? 'bg-gradient-to-b from-[#262626] to-[#181818] border-[#FF6A00]/40 border-t-white/30 text-white shadow-[0_2px_8px_rgba(255,106,0,0.25),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                : 'bg-gradient-to-b from-[#202020] to-[#141414] border-white/10 border-t-white/20 text-white hover:border-white/20 shadow-[0_2px_6px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)]'
-            }`}
+            className="inline-flex h-9.5 w-9.5 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-b from-[#202020] to-[#141414] text-white hover:border-white/20 md:hidden"
           >
             {mobileMenuOpen ? (
               <X className="h-4.5 w-4.5" aria-hidden="true" />
@@ -216,78 +157,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Mobile Quick Search Bar */}
-      {mobileSearchOpen && (
-        <div className="border-t border-white/10 bg-[#0A0A0A] px-4 py-3 sm:hidden">
-          <label htmlFor="mobile-quick-search" className="sr-only">
-            Search projects
-          </label>
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45"
-            />
-            <input
-              id="mobile-quick-search"
-              type="search"
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => handleSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Search projects..."
-              className="h-10 w-full rounded-xl border border-white/12 border-t-black/70 bg-[#0C0C0C] pl-9 pr-9 text-sm text-white placeholder:text-white/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),0_1px_0_rgba(255,255,255,0.05)] focus:border-[#FF6A00] focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),0_0_12px_rgba(255,106,0,0.25)] focus:outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => handleSearchInput('')}
-                aria-label="Clear mobile search"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-white/60 hover:text-white"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Compact Mobile Drawer */}
+      {/* Mobile Navigation Dropdown */}
       {mobileMenuOpen && (
         <div
           id="mobile-navigation-panel"
-          className="border-t border-white/10 bg-[#0A0A0A] px-4 py-4 md:hidden"
+          className="border-t border-white/10 bg-[#0C0C0C]/98 backdrop-blur-2xl px-4 py-4 md:hidden shadow-2xl"
         >
-          <div className="mb-4 sm:hidden">
-            <label htmlFor="mobile-project-search" className="sr-only">
-              Search projects
-            </label>
-            <div className="relative">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45"
-              />
-              <input
-                id="mobile-project-search"
-                type="search"
-                value={searchQuery}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search projects..."
-                className="h-10 w-full rounded-xl border border-white/12 border-t-black/70 bg-[#0C0C0C] pl-9 pr-9 text-sm text-white placeholder:text-white/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),0_1px_0_rgba(255,255,255,0.05)] focus:border-[#FF6A00] focus:shadow-[inset_0_2px_4px_rgba(0,0,0,0.65),0_0_12px_rgba(255,106,0,0.25)] focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => handleSearchInput('')}
-                  aria-label="Clear mobile search"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-white/60 hover:text-white"
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          </div>
-
           <nav aria-label="Mobile navigation" className="flex flex-col gap-2">
             {NAV_ITEMS.map((item) => {
               const isActive = activeSection === item.id;

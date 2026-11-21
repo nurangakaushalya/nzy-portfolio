@@ -11,6 +11,16 @@ interface UseSmoothScrollOptions {
   isModalOpen?: boolean;
 }
 
+/**
+ * Custom hook to initialize and manage a single unified Lenis smooth-scroll instance.
+ *
+ * Current Mode: Duration-based easing
+ * - Tuned in small increments: 0.75s -> 0.85s -> 0.95s -> 1.00s
+ * - Immediate pickup on wheel tick via high-slope exponential curve at t=0
+ * - Settle decelerates smoothly over 1.00s matching graphixdesign.agency's gentle glide
+ * - Note: To use pure linear interpolation (lerp) like graphixdesign.agency (lerp: 0.1),
+ *   simply comment out `duration` and `easing` below and uncomment `lerp: 0.1`.
+ */
 export function useSmoothScroll({ isModalOpen = false }: UseSmoothScrollOptions = {}) {
   const lenisRef = useRef<Lenis | null>(null);
   const rafIdRef = useRef<number | null>(null);
@@ -21,49 +31,27 @@ export function useSmoothScroll({ isModalOpen = false }: UseSmoothScrollOptions 
     // Check prefers-reduced-motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (mediaQuery.matches) {
-      document.documentElement.style.setProperty('--thumbnail-stretch', '1');
       return;
     }
 
-    // Initialize Lenis with modest duration (0.75s) and gentle inertia
+    // Initialize Lenis with tuned duration-based easing for gentle glide
     const lenis = new Lenis({
-      duration: 0.75, // modest duration (0.6–0.9s range)
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // smooth, restrained easing
+      duration: 1.0, // Tuned from 0.75s in small increments (0.75s -> 0.85s -> 0.95s -> 1.00s)
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // immediate response at t=0, exponential smooth settle
+      // Alternative pure lerp configuration (exact graphixdesign.agency equivalent):
+      // lerp: 0.1,
       smoothWheel: true,
       syncTouch: false, // keep native touch scrolling on phones and tablets
       touchMultiplier: 1,
-      autoRaf: false, // controlled by our dedicated animation frame loop
+      autoRaf: false, // controlled strictly by our single dedicated animation frame loop
     });
 
     lenisRef.current = lenis;
     window.__lenis = lenis;
 
-    // Thumbnail stretch state tracking
-    let currentStretch = 1;
-    let prevStretch = 1;
-    const maxStretch = 0.01; // Limit stretch strictly to ~1% (scaleY 1 to 1.01)
-
+    // Dedicated single animation loop for Lenis (zero style recalculations on document root)
     const raf = (time: number) => {
       lenis.raf(time);
-
-      // Compute stretch factor based on scroll velocity
-      const velocity = Math.abs(lenis.velocity || 0);
-      // Map velocity (0–80) to stretch (0–0.01)
-      const targetStretch = 1 + Math.min(maxStretch, (velocity / 90) * maxStretch);
-
-      // Smoothly interpolate towards target (or return to 1 when scroll settles)
-      currentStretch += (targetStretch - currentStretch) * 0.16;
-
-      if (Math.abs(currentStretch - 1) < 0.0003) {
-        currentStretch = 1;
-      }
-
-      // Only touch DOM property when stretch value has meaningful delta
-      if (Math.abs(currentStretch - prevStretch) > 0.0001 || (currentStretch === 1 && prevStretch !== 1)) {
-        document.documentElement.style.setProperty('--thumbnail-stretch', currentStretch.toFixed(4));
-        prevStretch = currentStretch;
-      }
-
       rafIdRef.current = requestAnimationFrame(raf);
     };
 
@@ -76,7 +64,6 @@ export function useSmoothScroll({ isModalOpen = false }: UseSmoothScrollOptions 
         lenis.destroy();
         lenisRef.current = null;
         window.__lenis = undefined;
-        document.documentElement.style.setProperty('--thumbnail-stretch', '1');
       }
     };
 
@@ -91,7 +78,6 @@ export function useSmoothScroll({ isModalOpen = false }: UseSmoothScrollOptions 
       lenis.destroy();
       lenisRef.current = null;
       window.__lenis = undefined;
-      document.documentElement.style.setProperty('--thumbnail-stretch', '1');
     };
   }, []);
 
@@ -125,7 +111,7 @@ export function scrollToTarget(target: string | HTMLElement, offset = -72) {
   if (lenis && !isReducedMotion) {
     lenis.scrollTo(targetEl, {
       offset,
-      duration: 0.75,
+      duration: 0.85,
     });
   } else {
     const headerHeight = parseInt(

@@ -59,9 +59,18 @@ export const CategoryFilterBar: React.FC<CategoryFilterBarProps> = ({
       <div className="hidden md:flex items-center justify-between px-2.5 py-2 text-xs font-extrabold uppercase tracking-wider text-white border-b border-white/10 mb-2.5">
         <div className="flex items-center gap-2">
           <Layers className="h-3.5 w-3.5 text-[#FF6A00]" aria-hidden="true" />
-          <span>Categories</span>
+          <span
+            style={{
+              fontFamily: "'Archivo Black', system-ui, -apple-system, sans-serif",
+              fontWeight: 400,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            <span className="text-white">Our </span>
+            <span className="text-[#FF6A00]">Categories</span>
+          </span>
         </div>
-        <span className="text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-[#1C1C1C] text-white border border-white/10 shadow-[inset_0_1px_1px_rgba(0,0,0,0.6)]">
+        <span className="text-[11px] font-mono font-extrabold px-2 py-0.5 rounded-full bg-[#1C1C1C] text-[#FF6A00] border border-[#FF6A00]/30 shadow-[inset_0_1px_1px_rgba(0,0,0,0.6)]">
           {ordered.length + 1}
         </span>
       </div>

@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     const lenis = window.__lenis;
 
     if (lenis && !isReducedMotion) {
-      lenis.scrollTo(0, { duration: 0.75 });
+      lenis.scrollTo(0, { duration: 0.85 });
     } else {
       window.scrollTo({
         top: 0,
@@ -27,7 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   };
 
   return (
-    <footer className="mt-auto relative w-full border-t border-white/10 bg-[#070707] overflow-hidden text-white">
+    <footer className="mt-auto relative w-full border-t border-white/10 bg-black/40 backdrop-blur-md overflow-hidden text-white">
       {/* Large Decorative Background Logo (Dark Charcoal Silhouette with Bottom Fade Mask) */}
       <div
         aria-hidden="true"

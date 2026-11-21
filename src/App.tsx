@@ -12,8 +12,8 @@ import type {
   Project,
 } from './types/portfolio';
 import { Header } from './components/Header';
+import { AmbientBackground } from './components/AmbientBackground';
 import { WorkView } from './components/WorkView';
-import { CategoriesView } from './components/CategoriesView';
 import { AboutView } from './components/AboutView';
 import { ContactView } from './components/ContactView';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -34,7 +34,7 @@ function parseSectionFromLocation(): NavSection {
     return 'services';
   }
   if (path === '/categories') {
-    return 'categories';
+    return 'work';
   }
   if (path === '/about') {
     return 'about';
@@ -70,8 +70,6 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<NavSection>(() =>
     parseSectionFromLocation()
   );
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [contactPrefill, setContactPrefill] =
     useState<ContactEnquiryPrefill | null>(null);
 
@@ -152,8 +150,6 @@ export default function App() {
     const restored = localPortfolioRepository.reset();
     setStorageError(null);
     setPortfolioData(restored);
-    setSelectedCategoryId('all');
-    setSearchQuery('');
   }, []);
 
   const categoryNameMap = useMemo(() => {
@@ -161,16 +157,6 @@ export default function App() {
     portfolioData.categories.forEach((cat) => map.set(cat.id, cat.name));
     return map;
   }, [portfolioData.categories]);
-
-  // Keep selected category valid if admin deletes an empty category
-  useEffect(() => {
-    if (
-      selectedCategoryId !== 'all' &&
-      !portfolioData.categories.some((c) => c.id === selectedCategoryId)
-    ) {
-      setSelectedCategoryId('all');
-    }
-  }, [portfolioData.categories, selectedCategoryId]);
 
   const handleOpenProject = useCallback(
     (project: Project, triggerEl: HTMLElement | null) => {
@@ -215,45 +201,15 @@ export default function App() {
     ? categoryNameMap.get(activeProject.categoryId) ?? 'Uncategorized'
     : '';
 
-  const handleSearchSubmit = useCallback(() => {
-    if (activeSection !== 'work') {
-      navigate('work');
-    }
-    setTimeout(() => {
-      scrollToTarget('#portfolio-section');
-    }, 60);
-  }, [activeSection, navigate]);
-
   return (
     <div className="relative flex min-h-screen flex-col bg-black text-white selection:bg-[#FF6A00] selection:text-black">
-      {/* Ambient Background Gradient Meshes */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
-      >
-        {/* Glow Orb 1: Upper right warm vibrant orange glow */}
-        <div className="absolute -top-32 -right-24 h-[550px] w-[550px] sm:h-[750px] sm:w-[750px] rounded-full bg-gradient-to-br from-[#FF6A00]/18 via-[#FF4500]/9 to-transparent blur-[110px] transform-gpu" />
-
-        {/* Glow Orb 2: Mid left deep ember & amber glow */}
-        <div className="absolute top-[35%] -left-36 h-[600px] w-[600px] sm:h-[800px] sm:w-[800px] rounded-full bg-gradient-to-tr from-[#FF5500]/13 via-[#B83000]/8 to-transparent blur-[130px] transform-gpu" />
-
-        {/* Glow Orb 3: Lower right rich crimson / dusk aura */}
-        <div className="absolute top-[68%] -right-28 h-[550px] w-[550px] sm:h-[720px] sm:w-[720px] rounded-full bg-gradient-to-bl from-[#FF7A1A]/14 via-[#7A1540]/8 to-transparent blur-[125px] transform-gpu" />
-
-        {/* Glow Orb 4: Bottom left warm deep amber glow */}
-        <div className="absolute -bottom-28 left-[12%] h-[550px] w-[550px] sm:h-[750px] sm:w-[750px] rounded-full bg-gradient-to-t from-[#FF6A00]/14 via-[#E64A00]/7 to-transparent blur-[120px] transform-gpu" />
-
-        {/* Subtle decorative radial vignette */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,40,10,0.14),rgba(0,0,0,0))]" />
-      </div>
+      {/* Shared Ambient Background Gradient: covers full viewport on short pages & remains visible through bottom of long pages */}
+      <AmbientBackground />
 
       <div className="relative z-10 flex min-h-screen flex-col">
         <Header
           activeSection={activeSection}
-          searchQuery={searchQuery}
           onNavigate={navigate}
-          onSearchChange={setSearchQuery}
-          onSearchSubmit={handleSearchSubmit}
         />
 
         <main className="flex-1 pt-[var(--header-height,4rem)]">
@@ -261,14 +217,7 @@ export default function App() {
             <WorkView
               categories={portfolioData.categories}
               projects={portfolioData.projects}
-              selectedCategoryId={selectedCategoryId}
-              searchQuery={searchQuery}
               isOtherVideoPlaying={Boolean(activeProject)}
-              onSelectCategory={setSelectedCategoryId}
-              onClearFilters={() => {
-                setSelectedCategoryId('all');
-                setSearchQuery('');
-              }}
               onOpenProject={handleOpenProject}
               onEnquireService={(serviceName) => {
                 setContactPrefill({
@@ -279,22 +228,11 @@ export default function App() {
             />
           )}
 
-          {activeSection === 'categories' && (
-            <CategoriesView
-              categories={portfolioData.categories}
-              projects={portfolioData.projects}
-              onSelectCategory={(categoryId) => {
-                setSelectedCategoryId(categoryId);
-                navigate('work');
-                setTimeout(() => {
-                  scrollToTarget('#portfolio-section');
-                }, 60);
-              }}
-            />
-          )}
-
           {activeSection === 'about' && (
-            <AboutView onGoToContact={() => navigate('contact')} />
+            <AboutView
+              onGoToWork={() => navigate('work')}
+              onGoToContact={() => navigate('contact')}
+            />
           )}
 
           {activeSection === 'contact' && (

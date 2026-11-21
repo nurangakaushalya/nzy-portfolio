@@ -1,6 +1,21 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ChevronDown, Volume2, VolumeX, Play } from 'lucide-react';
 import { SHOWREEL_CONFIG } from '../config/showreel';
+import { extractYouTubeId } from '../utils/youtube';
+import {
+  applyNativeVideoVolume,
+  applyYouTubePlayerVolume,
+  createPlayerVolumeState,
+  recordUserChosenVolume,
+  type PlayerVolumeState,
+} from '../utils/showreelVolume';
+
+declare global {
+  interface Window {
+    YT?: any;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
 
 interface ShowreelHeroProps {
   onExploreClick: () => void;
@@ -13,9 +28,13 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const ytPlayerRef = useRef<any>(null);
+
+  // Volume state ref tracks initialization once per player instance and preserves visitor-chosen volume
+  const volumeStateRef = useRef<PlayerVolumeState>(createPlayerVolumeState());
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  // Always initialize unmuted as requested ("Keep the showreel unmute when loading the site and after refreshing the site as well")
+  // Always initialize unmuted as requested
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [hasAutoplayFailed, setHasAutoplayFailed] = useState<boolean>(false);
   const [videoError, setVideoError] = useState<boolean>(false);
@@ -25,20 +44,34 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
   // Track if video was playing before being interrupted by visibility change or external modal
   const wasPlayingBeforeInterruptionRef = useRef<boolean>(true);
 
+  const youtubeId = SHOWREEL_CONFIG.videoUrl ? extractYouTubeId(SHOWREEL_CONFIG.videoUrl) : null;
+
   // Check prefers-reduced-motion
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Handle video element play / pause / volume listeners
+  // -------------------------------------------------------------
+  // Native HTML Video Element Handlers
+  // -------------------------------------------------------------
   useEffect(() => {
+    if (youtubeId) return;
+
     const video = videoRef.current;
     if (!video) return;
 
+    // Apply default volume of 0.15 (15%) once per player instance
+    applyNativeVideoVolume(video, volumeStateRef.current);
+
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleVolume = () => setIsMuted(video.muted);
+    const handleVolume = () => {
+      setIsMuted(video.muted);
+      if (!video.muted) {
+        recordUserChosenVolume(video.volume, volumeStateRef.current);
+      }
+    };
 
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
@@ -49,15 +82,124 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('volumechange', handleVolume);
     };
-  }, []);
+  }, [youtubeId]);
 
+  // -------------------------------------------------------------
+  // YouTube IFrame Player API Initialization (if hero is a YouTube video)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (!youtubeId) return;
+
+    let isMounted = true;
+
+    const initYouTubePlayer = () => {
+      if (!isMounted || !window.YT || !window.YT.Player) return;
+
+      try {
+        ytPlayerRef.current = new window.YT.Player('hero-youtube-embed', {
+          videoId: youtubeId,
+          playerVars: {
+            autoplay: prefersReducedMotion ? 0 : 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            loop: 1,
+            playlist: youtubeId,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+            iv_load_policy: 3,
+            enablejsapi: 1,
+          },
+          events: {
+            onReady: (event: any) => {
+              if (!isMounted) return;
+              const player = event.target;
+              ytPlayerRef.current = player;
+
+              // Set default volume once per player instance to 15%
+              applyYouTubePlayerVolume(player, volumeStateRef.current);
+
+              if (!prefersReducedMotion) {
+                player.unMute();
+                setIsMuted(false);
+                player.playVideo();
+                setIsPlaying(true);
+              }
+            },
+            onStateChange: (event: any) => {
+              if (!isMounted) return;
+              // 1: PLAYING, 2: PAUSED, 0: ENDED
+              if (event.data === 1) {
+                setIsPlaying(true);
+                setHasAutoplayFailed(false);
+              } else if (event.data === 2) {
+                setIsPlaying(false);
+              } else if (event.data === 0) {
+                // Ensure seamless loop without volume change
+                event.target.playVideo();
+              }
+            },
+            onError: () => {
+              if (isMounted) setVideoError(true);
+            },
+          },
+        });
+      } catch {
+        if (isMounted) setVideoError(true);
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      initYouTubePlayer();
+    } else {
+      const existingTag = document.getElementById('youtube-iframe-api');
+      if (!existingTag) {
+        const tag = document.createElement('script');
+        tag.id = 'youtube-iframe-api';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }
+
+      const prevHandler = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prevHandler === 'function') {
+          prevHandler();
+        }
+        initYouTubePlayer();
+      };
+    }
+
+    return () => {
+      isMounted = false;
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.destroy === 'function') {
+        ytPlayerRef.current.destroy();
+        ytPlayerRef.current = null;
+      }
+    };
+  }, [youtubeId, prefersReducedMotion]);
+
+  // -------------------------------------------------------------
+  // Unmute & Play Action
+  // -------------------------------------------------------------
   const unmuteAndPlay = useCallback(() => {
+    userManuallyMutedRef.current = false;
+
+    if (youtubeId && ytPlayerRef.current) {
+      applyYouTubePlayerVolume(ytPlayerRef.current, volumeStateRef.current);
+      ytPlayerRef.current.unMute();
+      ytPlayerRef.current.playVideo();
+      setIsMuted(false);
+      setIsPlaying(true);
+      setHasAutoplayFailed(false);
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
-    userManuallyMutedRef.current = false;
     video.muted = false;
-    video.volume = 1.0;
+    applyNativeVideoVolume(video, volumeStateRef.current);
     setIsMuted(false);
 
     const playPromise = video.play();
@@ -69,10 +211,14 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
         })
         .catch(() => {});
     }
-  }, []);
+  }, [youtubeId]);
 
-  // Initial playback attempt: always start unmuted on site load and after refresh
+  // -------------------------------------------------------------
+  // Initial native video playback attempt: start unmuted at 15% volume
+  // -------------------------------------------------------------
   useEffect(() => {
+    if (youtubeId) return;
+
     const video = videoRef.current;
     if (!video || prefersReducedMotion) {
       if (prefersReducedMotion) {
@@ -81,9 +227,9 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
       return;
     }
 
-    // Always attempt unmuted playback with full volume from the start
+    // Set default 15% volume once per player instance
+    applyNativeVideoVolume(video, volumeStateRef.current);
     video.muted = false;
-    video.volume = 1.0;
     setIsMuted(false);
 
     let unlockCleanup: (() => void) | null = null;
@@ -117,7 +263,7 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
             const vid = videoRef.current;
             if (vid) {
               vid.muted = false;
-              vid.volume = 1.0;
+              applyNativeVideoVolume(vid, volumeStateRef.current);
               setIsMuted(false);
               vid.play().catch(() => {});
             }
@@ -156,10 +302,29 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
         unlockCleanup();
       }
     };
-  }, [prefersReducedMotion]);
+  }, [youtubeId, prefersReducedMotion]);
 
+  // -------------------------------------------------------------
   // Handle external video playing (e.g. project modal open)
+  // -------------------------------------------------------------
   useEffect(() => {
+    if (youtubeId && ytPlayerRef.current) {
+      if (isOtherVideoPlaying) {
+        wasPlayingBeforeInterruptionRef.current = true;
+        if (typeof ytPlayerRef.current.pauseVideo === 'function') {
+          ytPlayerRef.current.pauseVideo();
+        }
+      } else {
+        if (
+          wasPlayingBeforeInterruptionRef.current &&
+          typeof ytPlayerRef.current.playVideo === 'function'
+        ) {
+          ytPlayerRef.current.playVideo();
+        }
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -173,11 +338,31 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
         video.play().catch(() => {});
       }
     }
-  }, [isOtherVideoPlaying]);
+  }, [isOtherVideoPlaying, youtubeId]);
 
+  // -------------------------------------------------------------
   // Page Visibility API
+  // -------------------------------------------------------------
   useEffect(() => {
     const handleVisibilityChange = () => {
+      if (youtubeId && ytPlayerRef.current) {
+        if (document.hidden) {
+          wasPlayingBeforeInterruptionRef.current = true;
+          if (typeof ytPlayerRef.current.pauseVideo === 'function') {
+            ytPlayerRef.current.pauseVideo();
+          }
+        } else {
+          if (
+            wasPlayingBeforeInterruptionRef.current &&
+            !isOtherVideoPlaying &&
+            typeof ytPlayerRef.current.playVideo === 'function'
+          ) {
+            ytPlayerRef.current.playVideo();
+          }
+        }
+        return;
+      }
+
       const video = videoRef.current;
       if (!video) return;
 
@@ -197,17 +382,40 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isOtherVideoPlaying]);
+  }, [isOtherVideoPlaying, youtubeId]);
 
+  // -------------------------------------------------------------
   // IntersectionObserver to pause when hero leaves viewport
+  // -------------------------------------------------------------
   useEffect(() => {
     const container = containerRef.current;
-    const video = videoRef.current;
-    if (!container || !video) return;
+    if (!container) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          if (youtubeId && ytPlayerRef.current) {
+            if (entry.intersectionRatio < 0.25) {
+              wasPlayingBeforeInterruptionRef.current = true;
+              if (typeof ytPlayerRef.current.pauseVideo === 'function') {
+                ytPlayerRef.current.pauseVideo();
+              }
+            } else {
+              if (
+                wasPlayingBeforeInterruptionRef.current &&
+                !isOtherVideoPlaying &&
+                !document.hidden &&
+                typeof ytPlayerRef.current.playVideo === 'function'
+              ) {
+                ytPlayerRef.current.playVideo();
+              }
+            }
+            return;
+          }
+
+          const video = videoRef.current;
+          if (!video) return;
+
           if (entry.intersectionRatio < 0.25) {
             if (!video.paused) {
               wasPlayingBeforeInterruptionRef.current = true;
@@ -234,16 +442,33 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [isOtherVideoPlaying]);
+  }, [isOtherVideoPlaying, youtubeId]);
 
+  // -------------------------------------------------------------
+  // Toggle Mute / Unmute
+  // -------------------------------------------------------------
   const toggleMute = useCallback(() => {
+    if (youtubeId && ytPlayerRef.current) {
+      if (isMuted) {
+        userManuallyMutedRef.current = false;
+        applyYouTubePlayerVolume(ytPlayerRef.current, volumeStateRef.current);
+        ytPlayerRef.current.unMute();
+        setIsMuted(false);
+      } else {
+        userManuallyMutedRef.current = true;
+        ytPlayerRef.current.mute();
+        setIsMuted(true);
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
     if (video.muted) {
       userManuallyMutedRef.current = false;
       video.muted = false;
-      video.volume = 1.0;
+      applyNativeVideoVolume(video, volumeStateRef.current);
       setIsMuted(false);
       video.play().catch(() => {});
     } else {
@@ -251,7 +476,7 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
       video.muted = true;
       setIsMuted(true);
     }
-  }, []);
+  }, [isMuted, youtubeId]);
 
   return (
     <section
@@ -264,8 +489,18 @@ export const ShowreelHero: React.FC<ShowreelHeroProps> = ({
       }}
       className="relative w-full h-[calc(100svh-var(--header-height,4rem))] min-h-[460px] max-h-[1200px] bg-black overflow-hidden flex flex-col justify-end select-none"
     >
-      {/* Video Background */}
-      {!videoError && (
+      {/* YouTube Player Stage (if configured with YouTube URL) */}
+      {youtubeId && !videoError && (
+        <div className="absolute inset-0 h-full w-full pointer-events-none overflow-hidden">
+          <div
+            id="hero-youtube-embed"
+            className="absolute inset-[-10%] h-[120%] w-[120%] pointer-events-none"
+          />
+        </div>
+      )}
+
+      {/* Native Video Background (if configured with direct mp4/webm) */}
+      {!youtubeId && !videoError && (
         <video
           ref={videoRef}
           src={SHOWREEL_CONFIG.videoUrl}

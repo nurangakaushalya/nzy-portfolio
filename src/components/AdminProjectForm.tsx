@@ -73,6 +73,12 @@ export const AdminProjectForm: React.FC<AdminProjectFormProps> = ({
   const [status, setStatus] = useState<ProjectStatus>(
     initialProject?.status ?? 'published'
   );
+  const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16'>(
+    initialProject?.aspectRatio ??
+      (initialProject?.orientation === 'portrait' || initialProject?.categoryId === 'cat-reels'
+        ? '9:16'
+        : '16:9')
+  );
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -152,6 +158,8 @@ export const AdminProjectForm: React.FC<AdminProjectFormProps> = ({
       thumbnailUrl: thumbnailUrl.trim(),
       status,
       order: initialProject?.order ?? nextOrder,
+      aspectRatio,
+      orientation: aspectRatio === '9:16' ? 'portrait' : 'landscape',
       ...(type === 'video'
         ? {
             youtubeUrl: youtubeUrl.trim() || undefined,
@@ -260,7 +268,7 @@ export const AdminProjectForm: React.FC<AdminProjectFormProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <label htmlFor="proj-category" className="block text-sm font-medium text-white">
               Category <span className="text-[#FF6A00]">*</span>
@@ -268,7 +276,13 @@ export const AdminProjectForm: React.FC<AdminProjectFormProps> = ({
             <select
               id="proj-category"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={(e) => {
+                const newCat = e.target.value;
+                setCategoryId(newCat);
+                if (newCat === 'cat-reels') {
+                  setAspectRatio('9:16');
+                }
+              }}
               className="mt-1.5 h-10 w-full rounded-lg border border-white/15 bg-black px-3 text-sm text-white focus:border-[#FF6A00] focus:outline-none"
             >
               {orderedCategories.map((cat) => (
@@ -276,6 +290,21 @@ export const AdminProjectForm: React.FC<AdminProjectFormProps> = ({
                   {cat.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="proj-aspect" className="block text-sm font-medium text-white">
+              Format / Aspect Ratio
+            </label>
+            <select
+              id="proj-aspect"
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as '16:9' | '9:16')}
+              className="mt-1.5 h-10 w-full rounded-lg border border-white/15 bg-black px-3 text-sm text-white focus:border-[#FF6A00] focus:outline-none"
+            >
+              <option value="16:9">16:9 Landscape</option>
+              <option value="9:16">9:16 Vertical Reel</option>
             </select>
           </div>
 

@@ -1,20 +1,17 @@
-import React from 'react';
-import {
-  Boxes,
-  Building2,
-  CheckCircle2,
-  Palette,
-  Smartphone,
-  Sparkles,
-  Tv,
-  Music,
-  ArrowRight,
-} from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { BRAND_CONFIG } from '../config/brand';
+import { AnimatedHeading } from './AnimatedHeading';
+
+import promoImg from '../assets/images/commercial_apex_watch_1794892278805.jpg';
+import reelsImg1 from '../assets/images/reel_streetwear_drop_1794892280358.jpg';
+import reelsImg2 from '../assets/images/reel_espresso_craft_1794892280303.jpg';
+import aiImg from '../assets/images/commercial_ev_horizon_1794892280413.jpg';
+import designImg from '../assets/images/design_poster_series_1794892283720.jpg';
 
 interface ServicesSectionProps {
-  onSelectCategory: (categoryId: string) => void;
-  onEnquireService: (serviceName: string) => void;
+  onSelectCategory?: (categoryId: string) => void;
+  onEnquireService?: (serviceName: string) => void;
 }
 
 const WhatsAppIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
@@ -28,221 +25,605 @@ const WhatsAppIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
   </svg>
 );
 
-interface ServiceItem {
+type ImageType = 'promo' | 'social' | 'ai' | 'design';
+
+interface ServiceBarItem {
   id: string;
   title: string;
-  tag: string;
-  categoryId: string;
-  prefillName: string;
-  icon: React.ComponentType<{ className?: string }>;
   description: string;
-  deliverables: string[];
+  imageType: ImageType;
 }
 
-const SERVICES: ServiceItem[] = [
+const SERVICES: ServiceBarItem[] = [
   {
-    id: 'commercials',
-    title: 'Commercials & Brand Films',
-    tag: 'Commercial',
-    categoryId: 'cat-commercials',
-    prefillName: 'Commercial / Brand Film',
-    icon: Tv,
-    description:
-      'High-impact editorial storytelling, product reveals, and cinematic brand launch films engineered to command viewer attention and inspire customer action.',
-    deliverables: [
-      'High-impact pacing & narrative rhythm',
-      'Precision sound design & audio mastering',
-      'Cinematic color grading (Rec.709 & HDR)',
-      'Broadcast-spec delivery & multi-aspect exports',
-    ],
+    id: 'promotional-video-editing',
+    title: 'Promotional Video Editing',
+    description: 'We cut product launches, event highlights, and brand campaigns into promos.',
+    imageType: 'promo',
   },
   {
-    id: 'social-reels',
-    title: 'Social Media Reels & Shorts',
-    tag: 'Short-Form',
-    categoryId: 'cat-reels',
-    prefillName: 'Social Media Reels',
-    icon: Smartphone,
-    description:
-      'Fast-paced, hook-driven 9:16 vertical edits optimized for Instagram Reels, TikTok, and YouTube Shorts to maximize viewer retention and engagement.',
-    deliverables: [
-      'Hook-driven opening 3-second pacing',
-      'Kinetic typography & dynamic captions',
-      'Beat-synced speed ramps & camera punch-ins',
-      'High-volume campaign cutdown packages',
-    ],
+    id: 'social-media-video-editing',
+    title: 'Social Media Video Editing',
+    description: 'Reels, Shorts, and feed videos for Instagram, TikTok, YouTube, and Facebook.',
+    imageType: 'social',
   },
   {
-    id: 'music-videos',
-    title: 'Music Videos & Live Visuals',
-    tag: 'Music',
-    categoryId: 'cat-music',
-    prefillName: 'Music Video',
-    icon: Music,
-    description:
-      'Atmospheric, rhythm-driven music videos, studio session documentaries, and performance visuals that elevate the musical identity of recording artists.',
-    deliverables: [
-      'Multi-camera performance synchronization',
-      'Stylized cinematic palettes & analog film emulation',
-      'Creative transition motifs & rhythmic cuts',
-      'Widescreen 4K mastering with lossless audio',
-    ],
-  },
-  {
-    id: 'corporate-videos',
-    title: 'Corporate Videos & Profiles',
-    tag: 'Enterprise',
-    categoryId: 'cat-corporate',
-    prefillName: 'Corporate Video',
-    icon: Building2,
-    description:
-      'Refined documentary-style corporate films, investor showcases, customer case studies, and executive interviews with disciplined visual structure.',
-    deliverables: [
-      'Clear narrative flow & polished dialogue cutting',
-      'Acoustic voice enhancement & noise reduction',
-      'Branded lower-thirds & informational graphics',
-      'Internal and external multi-channel exports',
-    ],
-  },
-  {
-    id: 'motion-graphics',
-    title: 'Motion Graphics & 3D Visuals',
-    tag: 'Motion & VFX',
-    categoryId: 'cat-motion',
-    prefillName: 'Motion Graphics',
-    icon: Boxes,
-    description:
-      'Title sequences, kinetic typography, 3D product animations, and visual effects that bring still assets to life with smooth, deliberate movement.',
-    deliverables: [
-      'Custom title sequences & animated intro stings',
-      'Logo animations & brand motion guidelines',
-      '2D/3D visual effects & seamless compositing',
-      'Product feature highlights & animated diagrams',
-    ],
+    id: 'ai-advertising-videos',
+    title: 'AI Advertising Videos',
+    description: 'We turn campaign ideas into video ads with AI-generated scenes.',
+    imageType: 'ai',
   },
   {
     id: 'graphic-design',
-    title: 'Graphic Design & Brand Identity',
-    tag: 'Identity & Print',
-    categoryId: 'cat-design',
-    prefillName: 'Graphic Design',
-    icon: Palette,
-    description:
-      'Comprehensive visual identity marks, typography guidelines, album artwork, campaign key visuals, and press-ready structural packaging systems.',
-    deliverables: [
-      'Visual identity systems & complete brand kits',
-      'Campaign posters, album art & digital covers',
-      'Packaging layouts & press-verified print files',
-      'Social media graphics & editorial templates',
-    ],
+    title: 'Graphic Design',
+    description: 'We design campaign posters, social graphics, and digital ads.',
+    imageType: 'design',
   },
 ];
 
 export const ServicesSection: React.FC<ServicesSectionProps> = ({
-  onSelectCategory,
   onEnquireService,
 }) => {
+  // Desktop active row (row 0 active on load, hovering switches smoothly)
+  const [activeDesktopIndex, setActiveDesktopIndex] = useState<number>(0);
+  // Mobile accordion toggle (-1 is all collapsed; default row 0 open)
+  const [mobileExpandedIndex, setMobileExpandedIndex] = useState<number>(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+
+  // Smooth scroll entrance reveal tracking
+  const [revealedRows, setRevealedRows] = useState<Record<number, boolean>>({});
+  const [staggerDelays, setStaggerDelays] = useState<Record<number, number>>({});
+  const observedElementsRef = useRef<HTMLElement[]>([]);
+
+  const revealRowImmediately = useCallback((index: number) => {
+    setRevealedRows((prev) => (prev[index] ? prev : { ...prev, [index]: true }));
+    setStaggerDelays((prev) => ({ ...prev, [index]: 0 }));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mq.matches);
+
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // IntersectionObserver: Reveals each row when its top enters the bottom 10% of viewport
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (prefersReducedMotion) {
+      const all: Record<number, boolean> = {};
+      SERVICES.forEach((_, idx) => {
+        all[idx] = true;
+      });
+      setRevealedRows(all);
+      return;
+    }
+
+    let staggerCounter = 0;
+    let batchTimer: number | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const intersecting = entries
+          .filter((e) => e.isIntersecting)
+          .map((e) => {
+            const index = Number(e.target.getAttribute('data-row-index'));
+            return { entry: e, index };
+          })
+          .sort((a, b) => a.index - b.index);
+
+        if (intersecting.length === 0) return;
+
+        intersecting.forEach(({ entry, index }) => {
+          observer.unobserve(entry.target);
+
+          const delay = staggerCounter * 60;
+          staggerCounter++;
+
+          setStaggerDelays((prev) => ({ ...prev, [index]: delay }));
+          setRevealedRows((prev) => ({ ...prev, [index]: true }));
+        });
+
+        if (batchTimer) clearTimeout(batchTimer);
+        batchTimer = window.setTimeout(() => {
+          staggerCounter = 0;
+        }, 180);
+      },
+      {
+        root: null,
+        // Bottom 10% of the viewport: triggers when top crosses 90% viewport height
+        rootMargin: '0px 0px -10% 0px',
+        threshold: 0,
+      }
+    );
+
+    observedElementsRef.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+      if (batchTimer) clearTimeout(batchTimer);
+    };
+  }, [prefersReducedMotion]);
+
+  const registerRowElement = (el: HTMLElement | null) => {
+    if (el && !observedElementsRef.current.includes(el)) {
+      observedElementsRef.current.push(el);
+    }
+  };
+
+  /**
+   * Renders the compact image near center with rounded corners,
+   * slight tilt, and second offset layer behind it.
+   */
+  const renderServiceImage = (
+    imageType: ImageType,
+    isOpen: boolean,
+    reducedMotion: boolean
+  ) => {
+    if (imageType === 'social') {
+      return (
+        <div className="relative w-[180px] h-[140px] flex items-center justify-center select-none pointer-events-none">
+          {/* Second offset layer behind */}
+          <div
+            aria-hidden="true"
+            className="absolute w-[124px] h-[106px] xl:w-[130px] xl:h-[112px] rounded-2xl bg-[#fff3ea] shadow-md"
+            style={{
+              transform: isOpen ? 'rotate(-6deg) scale(1)' : 'rotate(0deg) scale(0.6)',
+              opacity: isOpen ? 1 : 0,
+              transition: reducedMotion
+                ? 'none'
+                : 'transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease-out',
+            }}
+          />
+          {/* Two overlapping vertical frames from Nzy's short-form work */}
+          <div
+            className="relative z-10 flex items-center justify-center"
+            style={{
+              opacity: isOpen ? 1 : 0,
+              transform: isOpen ? 'scale(1)' : 'scale(0.6)',
+              transition: reducedMotion
+                ? 'none'
+                : 'transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease-out',
+            }}
+          >
+            {/* Reel Frame 1 (Streetwear Drop) */}
+            <img
+              src={reelsImg1}
+              alt="Social media reel streetwear frame"
+              aria-hidden="true"
+              className="w-[62px] h-[104px] xl:w-[68px] xl:h-[110px] object-cover rounded-xl shadow-lg -rotate-6 -translate-x-3.5 z-10"
+              style={{ objectPosition: 'center 20%' }}
+            />
+            {/* Reel Frame 2 (Espresso Craft) */}
+            <img
+              src={reelsImg2}
+              alt="Social media reel espresso craft frame"
+              aria-hidden="true"
+              className="w-[62px] h-[104px] xl:w-[68px] xl:h-[110px] object-cover rounded-xl shadow-2xl rotate-6 translate-x-3.5 -translate-y-1 z-20"
+              style={{ objectPosition: 'center' }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    let imgSrc = promoImg;
+    let imgAlt = 'Promotional video editing frame';
+    let layerW = 'w-[140px] xl:w-[150px]';
+    let layerH = 'h-[94px] xl:h-[100px]';
+    let imgW = 'w-[140px] xl:w-[150px]';
+    let imgH = 'h-[94px] xl:h-[100px]';
+
+    if (imageType === 'promo') {
+      imgSrc = promoImg;
+      imgAlt = 'Product launch commercial close-up';
+      layerW = 'w-[140px] xl:w-[150px]';
+      layerH = 'h-[94px] xl:h-[100px]';
+      imgW = 'w-[140px] xl:w-[150px]';
+      imgH = 'h-[94px] xl:h-[100px]';
+    } else if (imageType === 'ai') {
+      imgSrc = aiImg;
+      imgAlt = 'AI advertising scene still';
+      layerW = 'w-[140px] xl:w-[150px]';
+      layerH = 'h-[94px] xl:h-[100px]';
+      imgW = 'w-[140px] xl:w-[150px]';
+      imgH = 'h-[94px] xl:h-[100px]';
+    } else if (imageType === 'design') {
+      imgSrc = designImg;
+      imgAlt = 'Finished graphic design exhibition poster';
+      layerW = 'w-[88px] xl:w-[94px]';
+      layerH = 'h-[114px] xl:h-[120px]';
+      imgW = 'w-[88px] xl:w-[94px]';
+      imgH = 'h-[114px] xl:h-[120px]';
+    }
+
+    return (
+      <div className="relative w-[180px] h-[140px] flex items-center justify-center select-none pointer-events-none">
+        {/* Second offset layer behind */}
+        <div
+          aria-hidden="true"
+          className={`absolute ${layerW} ${layerH} rounded-2xl bg-[#fff3ea] shadow-md`}
+          style={{
+            transform: isOpen ? 'rotate(-6deg) scale(1)' : 'rotate(0deg) scale(0.6)',
+            opacity: isOpen ? 1 : 0,
+            transition: reducedMotion
+              ? 'none'
+              : 'transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease-out',
+          }}
+        />
+        {/* Front Image with rounded corners and slight tilt */}
+        <img
+          src={imgSrc}
+          alt={imgAlt}
+          aria-hidden="true"
+          className={`relative z-10 ${imgW} ${imgH} object-cover rounded-2xl shadow-[0_20px_45px_-12px_rgba(0,0,0,0.8)]`}
+          style={{
+            transform: isOpen ? 'rotate(3deg) scale(1)' : 'rotate(10deg) scale(0.6)',
+            opacity: isOpen ? 1 : 0,
+            transition: reducedMotion
+              ? 'none'
+              : 'transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease-out',
+          }}
+        />
+      </div>
+    );
+  };
+
   return (
     <section
       id="services-section"
       aria-labelledby="services-heading"
       className="relative mx-auto max-w-[1700px] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 scroll-mt-[calc(var(--header-height,4rem)+1.5rem)]"
     >
-      {/* Section Header */}
-      <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#FF6A00]/30 bg-[#FF6A00]/10 px-3.5 py-1 text-xs font-extrabold text-[#FF6A00] shadow-[0_0_12px_rgba(255,106,0,0.2)]">
+      {/* 
+        Section Header:
+        - Editorial scale headline in Archivo Black (native weight 400), Title Case, White & Orange
+        - Left edge aligned with service titles below across 320px, 390px, and desktop
+        - Static (does not animate with rows)
+      */}
+      <div className="mb-10 sm:mb-14 lg:mb-16 px-3.5 sm:px-5 lg:px-6 xl:px-8 text-left">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#FF6A00]/30 bg-[#FF6A00]/10 px-3.5 py-1 text-xs font-extrabold text-[#FF6A00] shadow-[0_0_12px_rgba(255,106,0,0.2)] mb-4 sm:mb-6">
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="uppercase tracking-wider">Disciplines & Capabilities</span>
         </div>
 
-        <h2
+        <AnimatedHeading
+          as="h2"
           id="services-heading"
-          className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl lg:text-5xl"
-        >
-          Our Services
-        </h2>
+          words={[
+            { text: 'Our', className: 'text-white' },
+            { text: 'Services', className: 'text-[#FF6A00]' },
+          ]}
+          style={{
+            fontFamily: "'Archivo Black', system-ui, -apple-system, sans-serif",
+            fontWeight: 400,
+            fontSize: 'clamp(3rem, 8.5vw, 8rem)',
+            letterSpacing: '-0.035em',
+          }}
+          className="text-left tracking-[-0.035em] select-none text-balance"
+        />
 
-        <p className="mt-4 text-base sm:text-lg text-white/70 leading-relaxed max-w-2xl text-balance">
+        <p className="mt-4 sm:mt-6 text-base sm:text-lg text-white/70 leading-relaxed max-w-2xl text-left">
           Tailored video editing, motion graphics, and visual design crafted with
           deliberate restraint and cinematic precision.
         </p>
       </div>
 
-      {/* Services Grid (6 Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-        {SERVICES.map((service) => {
-          const Icon = service.icon;
-          return (
-            <div
-              key={service.id}
-              className="depth-card group relative flex flex-col justify-between rounded-2xl p-6 sm:p-7 transition-all duration-200"
-            >
-              {/* Card Header & Content */}
-              <div>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-b from-[#262626] to-[#141414] border border-white/10 border-t-white/25 text-[#FF6A00] shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] group-hover:scale-105 group-hover:shadow-[0_0_18px_rgba(255,106,0,0.35)] transition-all duration-200">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <span className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-white/50 bg-white/5 px-2.5 py-1 rounded-full border border-white/5">
-                    {service.tag}
-                  </span>
-                </div>
+      {/* Services List (Graphix-style horizontal bars) */}
+      <div className="w-full">
+        {/* DESKTOP VIEW (>= lg) */}
+        <ul
+          aria-label="Services list"
+          className="hidden lg:block list-none m-0 p-0 border-t border-[#24221f]"
+        >
+          {SERVICES.map((service, index) => {
+            const isActive = activeDesktopIndex === index;
+            const isRevealed = Boolean(revealedRows[index]);
+            const delay = staggerDelays[index] ?? 0;
 
-                <h3 className="font-display text-xl font-bold text-white mt-5 transition-colors duration-180 group-hover:text-[#FF7A1A]">
-                  {service.title}
-                </h3>
-
-                <p className="mt-2.5 text-sm leading-relaxed text-white/70">
-                  {service.description}
-                </p>
-
-                {/* Key Deliverables */}
-                <div className="mt-6 border-t border-white/10 pt-5">
-                  <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-white/50 mb-3">
-                    What We Deliver
-                  </h4>
-                  <ul className="space-y-2">
-                    {service.deliverables.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2.5 text-xs text-white/85"
-                      >
-                        <CheckCircle2
-                          className="h-4 w-4 shrink-0 text-[#FF6A00] mt-0.5"
-                          aria-hidden="true"
-                        />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Card Footer Actions */}
-              <div className="mt-7 pt-5 border-t border-white/10 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => onSelectCategory(service.categoryId)}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white transition-colors group/btn py-2 px-3 rounded-lg hover:bg-white/5"
+            return (
+              /* Outer Wrapper: Drives the 500ms entrance fade & 16px slide up */
+              <div
+                key={`desktop-wrap-${service.id}`}
+                ref={registerRowElement}
+                data-row-index={index}
+                onFocusCapture={() => revealRowImmediately(index)}
+                className="w-full"
+                style={{
+                  opacity: isRevealed || prefersReducedMotion ? 1 : 0,
+                  transform:
+                    isRevealed || prefersReducedMotion ? 'translateY(0px)' : 'translateY(16px)',
+                  transition: prefersReducedMotion
+                    ? 'none'
+                    : 'opacity 500ms ease-out, transform 500ms ease-out',
+                  transitionDelay: prefersReducedMotion ? '0ms' : `${delay}ms`,
+                }}
+              >
+                <li
+                  tabIndex={0}
+                  role="button"
+                  aria-expanded={isActive}
+                  aria-label={`${service.title}, ${isActive ? 'expanded' : 'collapsed'}`}
+                  onMouseEnter={() => setActiveDesktopIndex(index)}
+                  onFocus={() => {
+                    revealRowImmediately(index);
+                    setActiveDesktopIndex(index);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveDesktopIndex(index);
+                    }
+                  }}
+                  className="relative isolate cursor-pointer border-b border-[#24221f] outline-none rounded-2xl select-none focus-visible:ring-2 focus-visible:ring-[#FF6A00] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                  style={{
+                    minHeight: isActive ? '200px' : '105px',
+                    opacity: isActive ? 1 : 0.45,
+                    transition: prefersReducedMotion
+                      ? 'none'
+                      : 'min-height 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease-out',
+                  }}
                 >
-                  <span>View Projects</span>
-                  <ArrowRight
-                    className="h-3.5 w-3.5 transition-transform duration-180 group-hover/btn:translate-x-1 text-[#FF6A00]"
+                  {/* Active Background Looping Orange Gradient */}
+                  <div
                     aria-hidden="true"
+                    className={`absolute inset-0 -z-10 rounded-2xl gx-service-gradient ${
+                      isActive ? 'gx-service-gradient-animate' : ''
+                    }`}
+                    style={{
+                      opacity: isActive ? 1 : 0,
+                      transform: isActive ? 'scaleY(1)' : 'scaleY(0.7)',
+                      pointerEvents: 'none',
+                      transition: prefersReducedMotion
+                        ? 'none'
+                        : 'opacity 250ms ease-out, transform 250ms ease-out',
+                    }}
                   />
-                </button>
 
-                <button
-                  type="button"
-                  onClick={() => onEnquireService(service.prefillName)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-black bg-gradient-to-b from-[#FF7A1A] to-[#FF6A00] border border-[#FF8A33] border-t-white/40 shadow-[0_2px_8px_rgba(255,106,0,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] hover:-translate-y-0.5 hover:shadow-[0_4px_14px_rgba(255,106,0,0.5)] active:translate-y-0 transition-all"
-                >
-                  <span>Enquire</span>
-                </button>
+                  {/* Horizontal Bar Layout:
+                      Left: Title (wraps naturally without touching image)
+                      Center: Compact image near center with tilt & offset layer
+                      Right: Short description in dark text against orange background
+                      Far Right: Indicator cross (+ to ×)
+                  */}
+                  <div
+                    className="grid grid-cols-[minmax(280px,1.35fr)_190px_minmax(250px,1fr)_36px] items-center gap-6 xl:gap-10 px-6 xl:px-8 py-5"
+                    style={{
+                      minHeight: isActive ? '200px' : '105px',
+                      transition: prefersReducedMotion
+                        ? 'none'
+                        : 'min-height 250ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    }}
+                  >
+                    {/* Col 1: Title in original left position */}
+                    <div className="flex items-baseline gap-3.5 xl:gap-5 min-w-0 pr-3">
+                      <span
+                        aria-hidden="true"
+                        className="font-mono text-xl xl:text-2xl font-light select-none transition-colors"
+                        style={{
+                          color: isActive ? '#0a0a0a' : '#FF6A00',
+                          transition: prefersReducedMotion ? 'none' : 'color 200ms ease-out',
+                        }}
+                      >
+                        //
+                      </span>
+                      <h3
+                        className="font-display font-bold text-2xl xl:text-[38px] leading-[1.08] tracking-tight transition-all break-words select-none"
+                        style={{
+                          color: isActive ? '#0a0a0a' : '#f2ede4',
+                          transform: isActive ? 'translateX(8px)' : 'translateX(0px)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'color 200ms ease-out, transform 200ms ease-out',
+                        }}
+                      >
+                        {service.title}
+                      </h3>
+                    </div>
+
+                    {/* Col 2: Compact Image Near Center (Tilted with offset layer, only visible when open) */}
+                    <div
+                      className="flex items-center justify-center pointer-events-none"
+                      style={{
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive ? 'scale(1)' : 'scale(0.85)',
+                        visibility: isActive ? 'visible' : 'hidden',
+                        transition: prefersReducedMotion
+                          ? 'none'
+                          : 'opacity 200ms ease-out, transform 250ms cubic-bezier(0.25, 1, 0.5, 1), visibility 250ms',
+                      }}
+                    >
+                      {renderServiceImage(service.imageType, isActive, prefersReducedMotion)}
+                    </div>
+
+                    {/* Col 3: Short Description Sentence in dark text against orange background */}
+                    <div
+                      className="max-w-md"
+                      style={{
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive ? 'translateY(0)' : 'translateY(8px)',
+                        pointerEvents: isActive ? 'auto' : 'none',
+                        visibility: isActive ? 'visible' : 'hidden',
+                        transition: prefersReducedMotion
+                          ? 'none'
+                          : 'opacity 200ms ease-out, transform 250ms cubic-bezier(0.25, 1, 0.5, 1), visibility 250ms',
+                      }}
+                    >
+                      <p className="text-sm xl:text-base leading-relaxed text-[#0a0a0a] font-medium font-sans select-text">
+                        {service.description}
+                      </p>
+                    </div>
+
+                    {/* Col 4: Indicator Icon (+ to ×) */}
+                    <div
+                      aria-hidden="true"
+                      className="w-7 h-7 relative flex items-center justify-center shrink-0 select-none pointer-events-none"
+                    >
+                      <span
+                        className="h-[1.5px] w-5 rounded-full"
+                        style={{
+                          backgroundColor: isActive ? '#0a0a0a' : '#f2ede4',
+                          transform: isActive ? 'rotate(45deg)' : 'rotate(0deg)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'transform 200ms ease-out, background-color 200ms ease-out',
+                        }}
+                      />
+                      <span
+                        className="h-[1.5px] w-5 rounded-full absolute"
+                        style={{
+                          backgroundColor: isActive ? '#0a0a0a' : '#f2ede4',
+                          transform: isActive ? 'rotate(135deg)' : 'rotate(90deg)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'transform 200ms ease-out, background-color 200ms ease-out',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </li>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </ul>
+
+        {/* MOBILE VIEW (< lg: Tap-to-Expand Accordion with Stacked Image & Sentence) */}
+        <div className="block lg:hidden border-t border-[#24221f]">
+          {SERVICES.map((service, index) => {
+            const isExpanded = mobileExpandedIndex === index;
+            const isRevealed = Boolean(revealedRows[index]);
+            const delay = staggerDelays[index] ?? 0;
+
+            return (
+              /* Outer Wrapper: Drives the 500ms entrance fade & 16px slide up */
+              <div
+                key={`mobile-wrap-${service.id}`}
+                ref={registerRowElement}
+                data-row-index={index}
+                onFocusCapture={() => revealRowImmediately(index)}
+                className="w-full"
+                style={{
+                  opacity: isRevealed || prefersReducedMotion ? 1 : 0,
+                  transform:
+                    isRevealed || prefersReducedMotion ? 'translateY(0px)' : 'translateY(16px)',
+                  transition: prefersReducedMotion
+                    ? 'none'
+                    : 'opacity 500ms ease-out, transform 500ms ease-out',
+                  transitionDelay: prefersReducedMotion ? '0ms' : `${delay}ms`,
+                }}
+              >
+                <div
+                  className={`relative border-b border-[#24221f] rounded-xl overflow-hidden transition-all ${
+                    isExpanded ? 'gx-service-gradient gx-service-gradient-animate' : ''
+                  }`}
+                  style={{
+                    opacity: isExpanded ? 1 : 0.6,
+                    transition: prefersReducedMotion ? 'none' : 'opacity 200ms ease-out',
+                  }}
+                >
+                  {/* Tap-to-Expand Button */}
+                  <button
+                    type="button"
+                    id={`service-toggle-${service.id}`}
+                    aria-expanded={isExpanded}
+                    aria-controls={`service-panel-${service.id}`}
+                    aria-label={`${service.title}, ${isExpanded ? 'collapse details' : 'expand details'}`}
+                    onClick={() => {
+                      revealRowImmediately(index);
+                      setMobileExpandedIndex((prev) => (prev === index ? -1 : index));
+                    }}
+                    className="w-full flex items-center justify-between py-5 px-4 sm:px-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6A00] rounded-xl select-none"
+                  >
+                    <div className="flex items-baseline gap-3 min-w-0 pr-3">
+                      <span
+                        aria-hidden="true"
+                        className="font-mono text-base sm:text-lg font-light transition-colors"
+                        style={{
+                          color: isExpanded ? '#0a0a0a' : '#FF6A00',
+                          transition: prefersReducedMotion ? 'none' : 'color 200ms ease-out',
+                        }}
+                      >
+                        //
+                      </span>
+                      <h3
+                        className="font-display font-bold text-xl sm:text-2xl tracking-tight transition-all break-words"
+                        style={{
+                          color: isExpanded ? '#0a0a0a' : '#f2ede4',
+                          transform: isExpanded ? 'translateX(6px)' : 'translateX(0px)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'color 200ms ease-out, transform 200ms ease-out',
+                        }}
+                      >
+                        {service.title}
+                      </h3>
+                    </div>
+
+                    {/* Indicator Icon (+ to ×) */}
+                    <div
+                      aria-hidden="true"
+                      className="w-6 h-6 relative shrink-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <span
+                        className="h-[1.5px] w-4.5 rounded-full"
+                        style={{
+                          backgroundColor: isExpanded ? '#0a0a0a' : '#f2ede4',
+                          transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'transform 200ms ease-out, background-color 200ms ease-out',
+                        }}
+                      />
+                      <span
+                        className="h-[1.5px] w-4.5 rounded-full absolute"
+                        style={{
+                          backgroundColor: isExpanded ? '#0a0a0a' : '#f2ede4',
+                          transform: isExpanded ? 'rotate(135deg)' : 'rotate(90deg)',
+                          transition: prefersReducedMotion
+                            ? 'none'
+                            : 'transform 200ms ease-out, background-color 200ms ease-out',
+                        }}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Stacked Image & Sentence Beneath Title on Mobile */}
+                  <div
+                    id={`service-panel-${service.id}`}
+                    role="region"
+                    aria-labelledby={`service-toggle-${service.id}`}
+                    className={`grid transition-[grid-template-rows] ease-out ${
+                      isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                    }`}
+                    style={{
+                      transitionDuration: prefersReducedMotion ? '0ms' : '250ms',
+                    }}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="flex flex-col items-center gap-4 px-4 pb-6 pt-1 text-center sm:text-left sm:flex-row sm:items-center sm:gap-6 sm:px-6">
+                        {/* Compact Image */}
+                        <div className="shrink-0 my-1">
+                          {renderServiceImage(service.imageType, isExpanded, prefersReducedMotion)}
+                        </div>
+
+                        {/* Short sentence in dark text against orange background */}
+                        <p className="text-sm sm:text-base leading-relaxed text-[#0a0a0a] font-medium font-sans max-w-sm sm:max-w-md select-text">
+                          {service.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Retainers & Custom Bundles Banner */}
@@ -263,7 +644,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
           <div className="flex flex-wrap items-center gap-3.5 shrink-0">
             <button
               type="button"
-              onClick={() => onEnquireService('Video & Design Package')}
+              onClick={() => onEnquireService?.('Video & Design Package')}
               className="depth-btn-active inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-extrabold text-black"
             >
               <span>Discuss Retainers</span>
